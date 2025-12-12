@@ -6,26 +6,6 @@ A digital recreation of those nostalgic lenticular stickers that change as you t
 
 **[Try it here](https://obta1ner.github.io/lenticular)**
 
-## Usage
-
-### Desktop
-- Move your mouse left and right across the screen
-- Click anywhere to show hidden menu
-- Click "HIDE MENU" to hide it
-
-### Mobile
-- Tap "ENTER" and grant gyroscope permission (iOS)
-- Tilt your device left and right
-- Tap the screen to show hidden menu
-- Tap "HIDE MENU" to hide it
-
-### Creating Your Own
-
-1. Click **UPLOAD IMAGES**
-2. Select exactly 3 images (works best with same resolution)
-3. Click **APPLY**
-4. Adjust **SETTINGS** to fine-tune the effect
-
 ## Local Development
 
 ```bash
