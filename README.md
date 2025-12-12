@@ -17,8 +17,6 @@ cd lenticular
 open index.html
 ```
 
-No build process needed - it's just vanilla HTML, CSS, and JavaScript!
-
 ## Project Structure
 
 ```
