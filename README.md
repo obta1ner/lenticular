@@ -4,7 +4,7 @@ A digital recreation of those nostalgic lenticular stickers that change as you t
 
 ## Live Demo
 
-**[Try it here](https://yourusername.github.io/lenticular)** ← Replace with your actual URL
+**[Try it here](https://obta1ner.github.io/lenticular)**
 
 ## Usage
 
