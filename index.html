@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Lenticular</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: #fff;
+            font-family: monospace;
+        }
+
+        #stage {
+            position: relative;
+            width: auto;
+            height: auto;
+            max-width: 100vw; 
+            max-height: 100vh;
+        }
+
+        canvas {
+            display: block;
+            max-width: 100vw; 
+            max-height: 100vh;
+            width: auto;
+            height: auto;
+            image-rendering: pixelated; 
+        }
+
+        #barrier {
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        #composite {
+            z-index: 1;
+        }
+
+        #overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            transition: opacity 0.3s;
+        }
+        
+        #overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        #startBtn {
+            padding: 16px 48px;
+            font-size: 16px;
+            background: #fff;
+            color: #000;
+            border: 2px solid #fff;
+            cursor: pointer;
+            text-transform: uppercase;
+            font-weight: bold;
+            letter-spacing: 2px;
+            font-family: monospace;
+        }
+
+        #startBtn:hover {
+            background: #000;
+            color: #fff;
+        }
+
+        /* UI Container - holds both buttons and settings */
+        #uiContainer {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            z-index: 50;
+        }
+
+        /* Button Panel */
+        #buttonPanel {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .control-btn {
+            padding: 12px 24px;
+            font-size: 14px;
+            background: #fff;
+            color: #000;
+            border: 2px solid #fff;
+            cursor: pointer;
+            font-family: monospace;
+            font-weight: bold;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            transition: background 0.2s, color 0.2s;
+            width: 200px;
+            box-sizing: border-box;
+            text-align: left;
+        }
+
+        .control-btn:hover {
+            background: #000;
+            color: #fff;
+        }
+
+        .control-btn.active {
+            background: #000;
+            color: #fff;
+        }
+
+        .control-btn:focus {
+            outline: none;
+        }
+
+        .control-btn:active {
+            background: #000;
+            color: #fff;
+        }
+
+        /* Prevent sticky hover on mobile */
+        @media (hover: none) {
+            .control-btn:hover {
+                background: #fff;
+                color: #000;
+            }
+        }
+
+        /* Settings Panel */
+        #settingsPanel {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            background: rgba(0,0,0,0.9);
+            margin-bottom: 8px;
+            width: 200px;
+        }
+
+        #settingsPanel.open {
+            max-height: 350px;
+        }
+
+        #settingsContent {
+            padding: 15px;
+            width: 170px;
+        }
+
+        #settingsPanel label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 12px;
+            color: #fff;
+        }
+
+        #settingsPanel input[type="range"] {
+            width: 100%;
+            margin-bottom: 20px;
+            margin-top: 20px;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 6px;
+            background: #444;
+            outline: none;
+            border-radius: 3px;
+        }
+
+        /* Slider thumb - Chrome, Safari, Edge */
+        #settingsPanel input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            background: #fff;
+            cursor: pointer;
+            border-radius: 50%;
+        }
+
+        /* Slider thumb - Firefox */
+        #settingsPanel input[type="range"]::-moz-range-thumb {
+            width: 24px;
+            height: 24px;
+            background: #fff;
+            cursor: pointer;
+            border-radius: 50%;
+            border: none;
+        }
+
+        /* Slider track - Firefox */
+        #settingsPanel input[type="range"]::-moz-range-track {
+            background: #444;
+            height: 6px;
+            border-radius: 3px;
+        }
+
+        .slider-value {
+            float: right;
+            font-weight: bold;
+        }
+
+        /* Hidden state for entire UI */
+        #uiContainer.hidden {
+            display: none;
+        }
+
+        /* About Modal */
+        #aboutModal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.9);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+        }
+
+        #aboutModal.open {
+            display: flex;
+        }
+
+        #aboutContent {
+            background: #000;
+            border: 2px solid #fff;
+            padding: 30px;
+            max-width: 400px;
+            font-family: monospace;
+            color: #fff;
+            margin: 20px;
+        }
+
+        #aboutContent h2 {
+            margin: 0 0 20px 0;
+            font-size: 20px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        #aboutContent p {
+            margin: 0 0 15px 0;
+            line-height: 1.6;
+            font-size: 14px;
+        }
+
+        #aboutContent p:last-of-type {
+            margin-bottom: 20px;
+        }
+
+        #aboutContent a {
+            color: #fff;
+            text-decoration: underline;
+        }
+
+        #aboutContent a:hover {
+            color: #aaa;
+        }
+
+        #closeAbout {
+            padding: 10px 20px;
+            background: #fff;
+            color: #000;
+            border: 2px solid #fff;
+            cursor: pointer;
+            font-family: monospace;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            width: 100%;
+        }
+
+        #closeAbout:hover {
+            background: #000;
+            color: #fff;
+        }
+
+        /* Upload Modal */
+        #uploadModal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.9);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+        }
+
+        #uploadModal.open {
+            display: flex;
+        }
+
+        #uploadContent {
+            background: #000;
+            border: 2px solid #fff;
+            padding: 30px;
+            max-width: 400px;
+            font-family: monospace;
+            color: #fff;
+            margin: 20px;
+        }
+
+        #uploadContent h2 {
+            margin: 0 0 15px 0;
+            font-size: 20px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .upload-warning {
+            background: rgba(255,255,255,0.1);
+            padding: 10px;
+            margin-bottom: 20px;
+            font-size: 12px;
+            line-height: 1.5;
+            border: 1px solid #fff;
+        }
+
+        .upload-slot {
+            margin-bottom: 20px;
+        }
+
+        .upload-slot label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .upload-slot input[type="file"] {
+            width: 100%;
+            padding: 8px;
+            background: #000;
+            color: #fff;
+            border: 2px solid #fff;
+            font-family: monospace;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .upload-slot input[type="file"]::file-selector-button {
+            background: #fff;
+            color: #000;
+            border: none;
+            padding: 6px 12px;
+            font-family: monospace;
+            font-weight: bold;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+
+        .file-count {
+            font-size: 11px;
+            margin-top: 5px;
+            color: #aaa;
+        }
+
+        #uploadButtons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        #uploadButtons button {
+            flex: 1;
+            padding: 10px 20px;
+            background: #fff;
+            color: #000;
+            border: 2px solid #fff;
+            cursor: pointer;
+            font-family: monospace;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        #uploadButtons button:hover {
+            background: #000;
+            color: #fff;
+        }
+
+        #uploadButtons button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="overlay">
+        <button id="startBtn">ENTER</button>
+    </div>
+
+    <div id="aboutModal">
+        <div id="aboutContent">
+            <h2>Lenticular</h2>
+            <p>A digital recreation of those nostalgic lenticular stickers that change as you tilt them.</p>
+            <p><strong>How to use:</strong><br>
+            • Mobile: Tilt your device left/right<br>
+            • Desktop: Move your mouse<br>
+            • Tap screen to show hidden menu</p>
+            <p><strong>Made by:</strong><br>
+            <a href="https://x.com/obtainer" target="_blank">@obtainer</a></p>
+            <p><strong>Inspired by:</strong><br>
+            <a href="https://x.com/kitasenjudesign/status/1625453194544578562" target="_blank">@kitasenjudesign</a></p>
+            <button id="closeAbout">CLOSE</button>
+        </div>
+    </div>
+
+    <div id="uploadModal">
+        <div id="uploadContent">
+            <h2>Upload Images</h2>
+            <div class="upload-warning">
+                ⚠ Select exactly 3 images. Works best when all images have the same resolution. If resolutions differ, output will be cropped to the smallest image dimensions.
+            </div>
+            <div class="upload-slot">
+                <label>Choose 3 Images:</label>
+                <input type="file" id="imageFiles" accept="image/*" multiple>
+                <div class="file-count" id="fileCount">0 files selected</div>
+            </div>
+            <div id="uploadButtons">
+                <button id="applyUpload" disabled>APPLY</button>
+                <button id="closeUpload">CANCEL</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="uiContainer">
+        <div id="settingsPanel">
+            <div id="settingsContent">
+                <label>
+                    Grid Width: <span id="gridWidthVal" class="slider-value">8</span>
+                    <input type="range" id="gridWidthSlider" min="1" max="100" value="8">
+                </label>
+                <label>
+                    Row Height: <span id="rowHeightVal" class="slider-value">40</span>
+                    <input type="range" id="rowHeightSlider" min="5" max="100" value="40">
+                </label>
+                <label>
+                    Row Offset: <span id="rowOffsetVal" class="slider-value">4</span>
+                    <input type="range" id="rowOffsetSlider" min="0" max="50" value="4">
+                </label>
+                <label>
+                    Animation Speed: <span id="animSpeedVal" class="slider-value">1</span>
+                    <input type="range" id="animSpeedSlider" min="0.1" max="3" step="0.1" value="1">
+                </label>
+                <label>
+                    Max Tilt Angle: <span id="maxAngleVal" class="slider-value">45</span>
+                    <input type="range" id="maxAngleSlider" min="5" max="90" value="45">
+                </label>
+            </div>
+        </div>
+        
+        <div id="buttonPanel">
+            <button class="control-btn" id="uploadBtn">UPLOAD IMAGES</button>
+            <button class="control-btn" id="settingsBtn">SETTINGS</button>
+            <button class="control-btn" id="aboutBtn">ABOUT</button>
+            <button class="control-btn" id="hideBtn">HIDE MENU</button>
+        </div>
+    </div>
+
+    <div id="stage">
+        <canvas id="composite"></canvas>
+        <canvas id="barrier"></canvas>
+    </div>
+
+    <script>
+        const imageUrls = [
+            'images/1.png',
+            'images/2.png',
+            'images/3.png',
+        ];
+
+        let gridWidth = 8;
+        let rowHeight = 40;
+        let rowOffset = 4;
+        let animSpeed = 1;
+        let maxAngle = 45;
+
+        const stage = document.getElementById('stage');
+        const cvsComposite = document.getElementById('composite');
+        const ctxComposite = cvsComposite.getContext('2d');
+        const cvsBarrier = document.getElementById('barrier');
+        const ctxBarrier = cvsBarrier.getContext('2d');
+        
+        const overlay = document.getElementById('overlay');
+        const startBtn = document.getElementById('startBtn');
+        const uiContainer = document.getElementById('uiContainer');
+        const settingsPanel = document.getElementById('settingsPanel');
+        
+        const uploadBtn = document.getElementById('uploadBtn');
+        const settingsBtn = document.getElementById('settingsBtn');
+        const aboutBtn = document.getElementById('aboutBtn');
+        const hideBtn = document.getElementById('hideBtn');
+        const aboutModal = document.getElementById('aboutModal');
+        const closeAbout = document.getElementById('closeAbout');
+        const uploadModal = document.getElementById('uploadModal');
+        const closeUpload = document.getElementById('closeUpload');
+        const applyUpload = document.getElementById('applyUpload');
+        const imageFiles = document.getElementById('imageFiles');
+        const fileCount = document.getElementById('fileCount');
+
+        const gridWidthSlider = document.getElementById('gridWidthSlider');
+        const rowHeightSlider = document.getElementById('rowHeightSlider');
+        const rowOffsetSlider = document.getElementById('rowOffsetSlider');
+        const animSpeedSlider = document.getElementById('animSpeedSlider');
+        const maxAngleSlider = document.getElementById('maxAngleSlider');
+        const gridWidthVal = document.getElementById('gridWidthVal');
+        const rowHeightVal = document.getElementById('rowHeightVal');
+        const rowOffsetVal = document.getElementById('rowOffsetVal');
+        const animSpeedVal = document.getElementById('animSpeedVal');
+        const maxAngleVal = document.getElementById('maxAngleVal');
+
+        let width = 800; 
+        let height = 800;
+        let images = [];
+        let loadedCount = 0;
+        let currentProgress = 0;
+
+        let settingsOpen = false;
+
+        // Button event listeners
+        uploadBtn.addEventListener('click', () => {
+            uploadModal.classList.add('open');
+        });
+
+        settingsBtn.addEventListener('click', () => {
+            settingsOpen = !settingsOpen;
+            if (settingsOpen) {
+                settingsPanel.classList.add('open');
+                settingsBtn.classList.add('active');
+            } else {
+                settingsPanel.classList.remove('open');
+                settingsBtn.classList.remove('active');
+            }
+        });
+
+        aboutBtn.addEventListener('click', () => {
+            aboutModal.classList.add('open');
+        });
+
+        closeAbout.addEventListener('click', () => {
+            aboutModal.classList.remove('open');
+        });
+
+        // Click outside to close about modal
+        aboutModal.addEventListener('click', (e) => {
+            if (e.target === aboutModal) {
+                aboutModal.classList.remove('open');
+            }
+        });
+
+        closeUpload.addEventListener('click', () => {
+            uploadModal.classList.remove('open');
+        });
+
+        // Click outside to close upload modal
+        uploadModal.addEventListener('click', (e) => {
+            if (e.target === uploadModal) {
+                uploadModal.classList.remove('open');
+            }
+        });
+
+        // Check if exactly 3 files are selected
+        imageFiles.addEventListener('change', () => {
+            const numFiles = imageFiles.files.length;
+            fileCount.textContent = `${numFiles} file${numFiles !== 1 ? 's' : ''} selected`;
+            
+            if (numFiles === 3) {
+                applyUpload.disabled = false;
+                fileCount.style.color = '#0f0';
+            } else {
+                applyUpload.disabled = true;
+                fileCount.style.color = numFiles > 3 ? '#f00' : '#aaa';
+            }
+        });
+
+        applyUpload.addEventListener('click', () => {
+            if (imageFiles.files.length !== 3) return;
+            
+            // Load the uploaded images
+            const files = Array.from(imageFiles.files);
+            
+            images = [];
+            loadedCount = 0;
+            
+            files.forEach((file) => {
+                const img = new Image();
+                const reader = new FileReader();
+                
+                reader.onload = (e) => {
+                    img.src = e.target.result;
+                    img.onload = () => {
+                        loadedCount++;
+                        if (loadedCount === 3) {
+                            init();
+                            uploadModal.classList.remove('open');
+                        }
+                    };
+                };
+                
+                reader.readAsDataURL(file);
+                images.push(img);
+            });
+        });
+
+        hideBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            uiContainer.classList.add('hidden');
+        });
+
+        // Click anywhere to show UI if hidden
+        document.body.addEventListener('click', (e) => {
+            // Don't trigger if clicking on modals or UI elements
+            if (uiContainer.classList.contains('hidden') && 
+                !aboutModal.classList.contains('open') && 
+                !uploadModal.classList.contains('open')) {
+                uiContainer.classList.remove('hidden');
+            }
+        });
+
+        // Slider event listeners
+        gridWidthSlider.addEventListener('input', (e) => {
+            gridWidth = parseInt(e.target.value);
+            gridWidthVal.textContent = gridWidth;
+            rebuild();
+        });
+
+        rowHeightSlider.addEventListener('input', (e) => {
+            rowHeight = parseInt(e.target.value);
+            rowHeightVal.textContent = rowHeight;
+            rebuild();
+        });
+
+        rowOffsetSlider.addEventListener('input', (e) => {
+            rowOffset = parseInt(e.target.value);
+            rowOffsetVal.textContent = rowOffset;
+            rebuild();
+        });
+
+        animSpeedSlider.addEventListener('input', (e) => {
+            animSpeed = parseFloat(e.target.value);
+            animSpeedVal.textContent = animSpeed.toFixed(1);
+        });
+
+        maxAngleSlider.addEventListener('input', (e) => {
+            maxAngle = parseInt(e.target.value);
+            maxAngleVal.textContent = maxAngle;
+        });
+
+        function rebuild() {
+            if (images.length === imageUrls.length && images[0].complete) {
+                createComposite();
+                createBarrier(currentProgress * gridWidth % gridWidth);
+            }
+        }
+
+        function preload() {
+            imageUrls.forEach(url => {
+                const img = new Image();
+                img.crossOrigin = "Anonymous";
+                img.src = url;
+                img.onload = () => {
+                    loadedCount++;
+                    if(loadedCount === imageUrls.length) init();
+                };
+                images.push(img);
+            });
+        }
+
+        function init() {
+            // Find smallest dimensions across all images
+            width = Math.min(...images.map(img => img.width));
+            height = Math.min(...images.map(img => img.height));
+
+            cvsComposite.width = width;
+            cvsComposite.height = height;
+            cvsBarrier.width = width;
+            cvsBarrier.height = height;
+
+            cvsComposite.style.position = 'relative';
+            cvsBarrier.style.position = 'absolute';
+            cvsBarrier.style.top = '0';
+            cvsBarrier.style.left = '0';
+
+            createComposite();
+            createBarrier(0);
+        }
+
+        function createComposite() {
+            ctxComposite.clearRect(0, 0, width, height);
+            const numImages = images.length;
+            const numStrips = Math.ceil(width / gridWidth) + 1;
+            const sliceWidth = gridWidth / numImages;
+            const numRows = Math.ceil(height / rowHeight);
+
+            for (let row = 0; row < numRows; row++) {
+                const y = row * rowHeight;
+                const xShift = (row % 2 === 0) ? 0 : rowOffset;
+                
+                for (let i = -1; i < numStrips; i++) {
+                    const xBase = i * gridWidth + xShift;
+                    
+                    for (let j = 0; j < numImages; j++) {
+                        const img = images[j];
+                        const dx = xBase + (j * sliceWidth);
+                        
+                        // Center crop offset
+                        const offsetX = (img.width - width) / 2;
+                        const offsetY = (img.height - height) / 2;
+                        
+                        ctxComposite.drawImage(
+                            img,
+                            offsetX + dx, offsetY + y, sliceWidth, rowHeight,
+                            dx, y, sliceWidth, rowHeight
+                        );
+                    }
+                }
+            }
+        }
+
+        function createBarrier(offsetX) {
+            ctxBarrier.clearRect(0, 0, width, height);
+            ctxBarrier.fillStyle = "black";
+            
+            const numImages = images.length;
+            const sliceWidth = gridWidth / numImages;
+            const barWidth = gridWidth - sliceWidth;
+            const totalBars = Math.ceil(width / gridWidth) + 2;
+            const numRows = Math.ceil(height / rowHeight);
+
+            for (let row = 0; row < numRows; row++) {
+                const y = row * rowHeight;
+                const xShift = (row % 2 === 0) ? 0 : rowOffset;
+                
+                for (let i = -1; i < totalBars; i++) {
+                    let x = (i * gridWidth) + offsetX + xShift;
+                    ctxBarrier.fillRect(x, y, barWidth, rowHeight);
+                }
+            }
+        }
+
+        function update(progress) {
+            currentProgress = progress;
+            const shift = progress * gridWidth; 
+            createBarrier(shift % gridWidth);
+        }
+
+        function handleOrientation(e) {
+            const gamma = e.gamma || 0; 
+            const clampedGamma = Math.max(-maxAngle, Math.min(maxAngle, gamma));
+            let p = (clampedGamma + maxAngle) / (maxAngle * 2);
+            requestAnimationFrame(() => update(p * imageUrls.length * animSpeed));
+        }
+
+        function handleMouse(e) {
+            const p = e.clientX / window.innerWidth;
+            requestAnimationFrame(() => update(p * imageUrls.length * animSpeed));
+        }
+
+        preload();
+        
+        const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        if (!isTouch) {
+            overlay.classList.add('hidden');
+            window.addEventListener('mousemove', handleMouse);
+        } else {
+            startBtn.addEventListener('click', () => {
+                if (typeof DeviceOrientationEvent !== 'undefined' && 
+                    typeof DeviceOrientationEvent.requestPermission === 'function') {
+                    DeviceOrientationEvent.requestPermission()
+                        .then(r => {
+                            if (r === 'granted') {
+                                window.addEventListener('deviceorientation', handleOrientation);
+                                overlay.classList.add('hidden');
+                            }
+                        });
+                } else {
+                    window.addEventListener('deviceorientation', handleOrientation);
+                    overlay.classList.add('hidden');
+                }
+            });
+        }
+    </script>
+</body>
+</html>
