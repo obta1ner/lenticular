@@ -135,6 +135,17 @@
                 background: #fff;
                 color: #000;
             }
+            
+            /* But keep active state for settings button */
+            .control-btn.active {
+                background: #000;
+                color: #fff;
+            }
+            
+            .control-btn:active {
+                background: #fff;
+                color: #000;
+            }
         }
 
         /* Settings Panel */
@@ -349,6 +360,7 @@
             font-family: monospace;
             font-size: 12px;
             cursor: pointer;
+            box-sizing: border-box;
         }
 
         .upload-slot input[type="file"]::file-selector-button {
@@ -366,6 +378,106 @@
             font-size: 11px;
             margin-top: 5px;
             color: #aaa;
+        }
+
+        #imagePreview {
+            display: none;
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid #fff;
+        }
+
+        #imagePreview.show {
+            display: block;
+        }
+
+        #imagePreview h3 {
+            margin: 0 0 10px 0;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-align: center;
+        }
+
+        #previewGrid {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .preview-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .preview-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            color: #aaa;
+            letter-spacing: 1px;
+        }
+
+        .preview-thumb-container {
+            position: relative;
+        }
+
+        .preview-thumb {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border: 2px solid #fff;
+            display: block;
+        }
+
+        .preview-arrows {
+            display: flex;
+            gap: 5px;
+            justify-content: center;
+        }
+
+        .arrow-btn {
+            background: #fff;
+            color: #000;
+            border: none;
+            width: 28px;
+            height: 28px;
+            cursor: pointer;
+            font-size: 14px;
+            font-family: monospace;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .arrow-btn:hover {
+            background: #000;
+            color: #fff;
+            border: 2px solid #fff;
+        }
+
+        .arrow-btn:disabled {
+            opacity: 0.2;
+            cursor: not-allowed;
+        }
+
+        /* Prevent sticky hover on arrow buttons for mobile */
+        @media (hover: none) {
+            .arrow-btn:hover {
+                background: #fff;
+                color: #000;
+                border: none;
+            }
+            
+            .arrow-btn:active {
+                background: #fff;
+                color: #000;
+                border: none;
+            }
         }
 
         #uploadButtons {
@@ -433,6 +545,41 @@
                 <input type="file" id="imageFiles" accept="image/*" multiple>
                 <div class="file-count" id="fileCount">0 files selected</div>
             </div>
+            <div id="imagePreview">
+                <h3>Reorder (matches tilt direction):</h3>
+                <div id="previewGrid">
+                    <div class="preview-item" data-position="0">
+                        <div class="preview-label">Left</div>
+                        <div class="preview-thumb-container">
+                            <img class="preview-thumb" id="thumb0" alt="Image 1">
+                        </div>
+                        <div class="preview-arrows">
+                            <button class="arrow-btn" data-pos="0" data-dir="left" disabled>◄</button>
+                            <button class="arrow-btn" data-pos="0" data-dir="right">►</button>
+                        </div>
+                    </div>
+                    <div class="preview-item" data-position="1">
+                        <div class="preview-label">Middle</div>
+                        <div class="preview-thumb-container">
+                            <img class="preview-thumb" id="thumb1" alt="Image 2">
+                        </div>
+                        <div class="preview-arrows">
+                            <button class="arrow-btn" data-pos="1" data-dir="left">◄</button>
+                            <button class="arrow-btn" data-pos="1" data-dir="right">►</button>
+                        </div>
+                    </div>
+                    <div class="preview-item" data-position="2">
+                        <div class="preview-label">Right</div>
+                        <div class="preview-thumb-container">
+                            <img class="preview-thumb" id="thumb2" alt="Image 3">
+                        </div>
+                        <div class="preview-arrows">
+                            <button class="arrow-btn" data-pos="2" data-dir="left">◄</button>
+                            <button class="arrow-btn" data-pos="2" data-dir="right" disabled>►</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <div id="uploadButtons">
                 <button id="applyUpload" disabled>APPLY</button>
                 <button id="closeUpload">CANCEL</button>
@@ -445,11 +592,11 @@
             <div id="settingsContent">
                 <label>
                     Grid Width: <span id="gridWidthVal" class="slider-value">8</span>
-                    <input type="range" id="gridWidthSlider" min="1" max="100" value="8">
+                    <input type="range" id="gridWidthSlider" min="5" max="100" value="8">
                 </label>
                 <label>
                     Row Height: <span id="rowHeightVal" class="slider-value">40</span>
-                    <input type="range" id="rowHeightSlider" min="5" max="100" value="40">
+                    <input type="range" id="rowHeightSlider" min="40" max="100" value="40">
                 </label>
                 <label>
                     Row Offset: <span id="rowOffsetVal" class="slider-value">4</span>
@@ -514,6 +661,9 @@
         const applyUpload = document.getElementById('applyUpload');
         const imageFiles = document.getElementById('imageFiles');
         const fileCount = document.getElementById('fileCount');
+        const imagePreview = document.getElementById('imagePreview');
+
+        let selectedFiles = [];
 
         const gridWidthSlider = document.getElementById('gridWidthSlider');
         const rowHeightSlider = document.getElementById('rowHeightSlider');
@@ -537,6 +687,10 @@
         // Button event listeners
         uploadBtn.addEventListener('click', () => {
             uploadModal.classList.add('open');
+            // If files already selected, show preview again
+            if (selectedFiles.length === 3) {
+                showPreview();
+            }
         });
 
         settingsBtn.addEventListener('click', () => {
@@ -577,45 +731,135 @@
         });
 
         // Check if exactly 3 files are selected
-        imageFiles.addEventListener('change', () => {
+        imageFiles.addEventListener('change', async () => {
             const numFiles = imageFiles.files.length;
             fileCount.textContent = `${numFiles} file${numFiles !== 1 ? 's' : ''} selected`;
             
             if (numFiles === 3) {
+                // Downscale large images before storing
+                const processedFiles = await Promise.all(
+                    Array.from(imageFiles.files).map(file => downscaleImage(file, 2000))
+                );
+                selectedFiles = processedFiles;
+                showPreview();
                 applyUpload.disabled = false;
                 fileCount.style.color = '#0f0';
             } else {
+                selectedFiles = [];
+                imagePreview.classList.remove('show');
                 applyUpload.disabled = true;
                 fileCount.style.color = numFiles > 3 ? '#f00' : '#aaa';
             }
         });
 
+        async function downscaleImage(file, maxSize) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        // Check if resizing needed
+                        if (img.width <= maxSize && img.height <= maxSize) {
+                            resolve(file); // No resize needed
+                            return;
+                        }
+
+                        // Calculate new dimensions
+                        let width = img.width;
+                        let height = img.height;
+                        
+                        if (width > height) {
+                            if (width > maxSize) {
+                                height = Math.round((height * maxSize) / width);
+                                width = maxSize;
+                            }
+                        } else {
+                            if (height > maxSize) {
+                                width = Math.round((width * maxSize) / height);
+                                height = maxSize;
+                            }
+                        }
+
+                        // Create canvas and resize
+                        const canvas = document.createElement('canvas');
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+
+                        // Convert back to blob/file
+                        canvas.toBlob((blob) => {
+                            const resizedFile = new File([blob], file.name, {
+                                type: file.type,
+                                lastModified: Date.now()
+                            });
+                            resolve(resizedFile);
+                        }, file.type);
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function showPreview() {
+            // Load thumbnails
+            selectedFiles.forEach((file, index) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    document.getElementById(`thumb${index}`).src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+
+            // Setup arrow click handlers
+            document.querySelectorAll('.arrow-btn').forEach(btn => {
+                btn.onclick = () => {
+                    const pos = parseInt(btn.dataset.pos);
+                    const dir = btn.dataset.dir;
+                    
+                    if (dir === 'left' && pos > 0) {
+                        // Swap with left
+                        [selectedFiles[pos], selectedFiles[pos - 1]] = 
+                        [selectedFiles[pos - 1], selectedFiles[pos]];
+                        showPreview();
+                    } else if (dir === 'right' && pos < 2) {
+                        // Swap with right
+                        [selectedFiles[pos], selectedFiles[pos + 1]] = 
+                        [selectedFiles[pos + 1], selectedFiles[pos]];
+                        showPreview();
+                    }
+                };
+            });
+
+            imagePreview.classList.add('show');
+        }
+
         applyUpload.addEventListener('click', () => {
-            if (imageFiles.files.length !== 3) return;
+            if (selectedFiles.length !== 3) return;
             
-            // Load the uploaded images
-            const files = Array.from(imageFiles.files);
-            
-            images = [];
+            // Load the uploaded images in current order
+            images = [null, null, null];
             loadedCount = 0;
             
-            files.forEach((file) => {
+            selectedFiles.forEach((file, index) => {
                 const img = new Image();
                 const reader = new FileReader();
                 
                 reader.onload = (e) => {
                     img.src = e.target.result;
                     img.onload = () => {
+                        images[index] = img;
                         loadedCount++;
                         if (loadedCount === 3) {
                             init();
                             uploadModal.classList.remove('open');
+                            imagePreview.classList.remove('show');
                         }
                     };
                 };
                 
                 reader.readAsDataURL(file);
-                images.push(img);
             });
         });
 
